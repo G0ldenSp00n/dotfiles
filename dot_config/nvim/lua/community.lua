@@ -8,10 +8,11 @@ return {
 	{ import = "astrocommunity.pack.lua" },
 	-- import/override with your plugins folder
 	{ import = "astrocommunity.colorscheme.catppuccin" },
+	{ import = "astrocommunity.pack.rust" },
 	{ import = "astrocommunity.pack.typescript" },
 	{ import = "astrocommunity.pack.lua" },
 	{ import = "astrocommunity.pack.kotlin" },
 	{ import = "astrocommunity.pack.java" },
 	{ import = "astrocommunity.recipes.vscode-icons" },
-	{ import = "astrocommunity.recipes.telescope-lsp-mappings" },
+	{ import = "astrocommunity.recipes.telescope-nvim-snacks" },
 }
