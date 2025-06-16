@@ -15,4 +15,5 @@ return {
 	{ import = "astrocommunity.pack.java" },
 	{ import = "astrocommunity.recipes.vscode-icons" },
 	{ import = "astrocommunity.recipes.telescope-nvim-snacks" },
+	{ import = "astrocommunity.note-taking.obsidian-nvim" },
 }
