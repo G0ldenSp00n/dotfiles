@@ -7,14 +7,8 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = { "c", "cpp" },
   callback = function()
     vim.keymap.set("n", "<F5>", function()
-      local rdbg_files = vim.fn.glob("*.rdbg", false, true)
-      if #rdbg_files > 0 then
-        -- Open the first .rdbg session file found in the current directory
-        vim.cmd('silent !start remedybg.exe ' .. vim.fn.shellescape(rdbg_files[1]))
-      else
-        -- Just start remedybg if no session file exists
-        vim.cmd('silent !start remedybg.exe')
-      end
+      -- Launch remedybg asynchronously and detached to prevent Neovim from freezing
+      vim.fn.jobstart({ "remedybg.exe", "debugger/hayden.rdbg" }, { detach = true })
     end, { buffer = true, desc = "Run in RemedyBG" })
   end,
 })
