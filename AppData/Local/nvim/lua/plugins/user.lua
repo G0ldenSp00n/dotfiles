@@ -5,6 +5,7 @@
 local function async_build(cmd, path_pattern, desc)
   return {
     function()
+      if not vim.fn.getcwd():match("project%-wormwood%-engine") then return end
       vim.notify("Building " .. desc .. "...", vim.log.levels.INFO)
       
       -- Function to actually run the build
