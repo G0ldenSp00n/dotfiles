@@ -26,7 +26,7 @@ local function async_build(cmd, path_pattern, desc)
             -- Standard MSVC compiler error format + glslangValidator format
             local efm = "%f(%l): %trror %m,%f(%l): %tarning %m,%f(%l): %m,%f(%l): note: %m,ERROR: %f:%l: %m,WARNING: %f:%l: %m"
             vim.fn.setqflist({}, "r", { lines = lines, efm = efm, title = desc .. " Output" })
-            vim.cmd("cwindow")
+            vim.cmd("copen")
             if obj.code == 0 then
               vim.notify(desc .. " successful!", vim.log.levels.INFO)
             else
@@ -43,7 +43,7 @@ local function async_build(cmd, path_pattern, desc)
             -- Auto-stop RemedyBG to ensure it releases the executable lock
             vim.fn.jobstart({ "C:/Users/spoon/Downloads/remedybg_0_3_6_4/remedybg.exe", "stop-debugging" }, { detach = true })
             -- Small delay to let RemedyBG fully detach before we start compiling
-            vim.defer_fn(run_build, 150)
+            vim.defer_fn(run_build, 35)
           end)
         else
           vim.schedule(run_build)
