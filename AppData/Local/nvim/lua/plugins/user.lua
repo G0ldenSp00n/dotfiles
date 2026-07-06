@@ -7,11 +7,8 @@ local function async_build(cmd, path_pattern, desc)
     function()
       vim.notify("Building " .. desc .. "...", vim.log.levels.INFO)
       
-      -- Auto-stop RemedyBG to ensure it releases the executable lock
-      vim.fn.jobstart({ "C:/Users/spoon/Downloads/remedybg_0_3_6_4/remedybg.exe", "stop-debugging" }, { detach = true })
-      
-      -- Small delay to let RemedyBG fully detach before we start compiling
-      vim.defer_fn(function()
+      -- Function to actually run the build
+      local run_build = function()
         vim.system({ "cmd.exe", "/c", cmd }, { text = true }, function(obj)
           vim.schedule(function()
             local raw_lines = vim.split(obj.stdout .. "\n" .. obj.stderr, "\n", { trimempty = true })
@@ -36,7 +33,21 @@ local function async_build(cmd, path_pattern, desc)
             end
           end)
         end)
-      end, 150)
+      end
+
+      -- Check if RemedyBG is running before trying to stop it
+      vim.system({ "tasklist", "/FI", "IMAGENAME eq remedybg.exe" }, { text = true }, function(tasklist_obj)
+        if tasklist_obj.stdout and tasklist_obj.stdout:match("remedybg%.exe") then
+          vim.schedule(function()
+            -- Auto-stop RemedyBG to ensure it releases the executable lock
+            vim.fn.jobstart({ "C:/Users/spoon/Downloads/remedybg_0_3_6_4/remedybg.exe", "stop-debugging" }, { detach = true })
+            -- Small delay to let RemedyBG fully detach before we start compiling
+            vim.defer_fn(run_build, 150)
+          end)
+        else
+          vim.schedule(run_build)
+        end
+      end)
     end,
     desc = desc,
   }
