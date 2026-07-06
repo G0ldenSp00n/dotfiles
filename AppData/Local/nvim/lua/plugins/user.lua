@@ -10,23 +10,58 @@ local function async_build(cmd, path_pattern, desc)
       
       -- Function to actually run the build
       local run_build = function()
-        vim.system({ "cmd.exe", "/c", cmd }, { text = true }, function(obj)
+        local efm = "%f(%l): %trror %m,%f(%l): %tarning %m,%f(%l): %m,%f(%l): note: %m,ERROR: %f:%l: %m,WARNING: %f:%l: %m"
+        
+        -- Open quickfix immediately
+        vim.fn.setqflist({}, "r", { lines = {}, efm = efm, title = desc .. " Output" })
+        vim.cmd("copen")
+        
+        local buffer = ""
+        local on_data = function(err, data)
+          if not data then return end
           vim.schedule(function()
-            local raw_lines = vim.split(obj.stdout .. "\n" .. obj.stderr, "\n", { trimempty = true })
+            buffer = buffer .. data
             local lines = {}
-            for _, line in ipairs(raw_lines) do
-              -- Fix relative paths caused by pushd in bat scripts
+            while true do
+              local nl = buffer:find("\n")
+              if not nl then break end
+              local line = buffer:sub(1, nl - 1):gsub("\r$", "")
+              buffer = buffer:sub(nl + 1)
+              
               local fixed = line:gsub(path_pattern, "src\\")
-              -- glslangValidator outputs "ERROR: ../../src/...", so we also need to catch it after "ERROR: "
               fixed = fixed:gsub("ERROR: " .. path_pattern, "ERROR: src\\")
               fixed = fixed:gsub("WARNING: " .. path_pattern, "WARNING: src\\")
               table.insert(lines, fixed)
             end
             
-            -- Standard MSVC compiler error format + glslangValidator format
-            local efm = "%f(%l): %trror %m,%f(%l): %tarning %m,%f(%l): %m,%f(%l): note: %m,ERROR: %f:%l: %m,WARNING: %f:%l: %m"
-            vim.fn.setqflist({}, "r", { lines = lines, efm = efm, title = desc .. " Output" })
-            vim.cmd("copen")
+            if #lines > 0 then
+              vim.fn.setqflist({}, "a", { lines = lines, efm = efm })
+              -- Scroll to bottom
+              local qf_win = vim.fn.getqflist({ winid = 0 }).winid
+              if qf_win ~= 0 then
+                local buf = vim.api.nvim_win_get_buf(qf_win)
+                vim.api.nvim_win_set_cursor(qf_win, { vim.api.nvim_buf_line_count(buf), 0 })
+              end
+            end
+          end)
+        end
+
+        vim.system({ "cmd.exe", "/c", cmd }, { 
+          stdout = on_data,
+          stderr = on_data
+        }, function(obj)
+          vim.schedule(function()
+            if buffer ~= "" then
+              local fixed = buffer:gsub("\r$", ""):gsub(path_pattern, "src\\")
+              fixed = fixed:gsub("ERROR: " .. path_pattern, "ERROR: src\\")
+              fixed = fixed:gsub("WARNING: " .. path_pattern, "WARNING: src\\")
+              vim.fn.setqflist({}, "a", { lines = { fixed }, efm = efm })
+              local qf_win = vim.fn.getqflist({ winid = 0 }).winid
+              if qf_win ~= 0 then
+                local buf = vim.api.nvim_win_get_buf(qf_win)
+                vim.api.nvim_win_set_cursor(qf_win, { vim.api.nvim_buf_line_count(buf), 0 })
+              end
+            end
             if obj.code == 0 then
               vim.notify(desc .. " successful!", vim.log.levels.INFO)
             else
