@@ -8,7 +8,9 @@ local function async_build(cmd, path_pattern, desc)
       if not vim.fn.getcwd():match("project%-wormwood%-engine") then return end
       
       -- Automatically save all unsaved buffers before building
+      vim.g.is_building = true
       vim.cmd("silent! wa")
+      vim.g.is_building = false
       
       vim.notify("Building " .. desc .. "...", vim.log.levels.INFO)
       

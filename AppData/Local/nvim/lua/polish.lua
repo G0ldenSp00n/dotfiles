@@ -79,3 +79,34 @@ vim.keymap.set("n", "<F6>", function()
     end
   end)
 end, { desc = "Restart Debugging in RemedyBG" })
+
+local function auto_build(key)
+  return function()
+    if not in_engine() then return end
+    if vim.g.is_building then return end
+    
+    local qf_open = false
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if vim.bo[vim.api.nvim_win_get_buf(win)].buftype == "quickfix" then
+        qf_open = true
+        break
+      end
+    end
+    
+    if qf_open then
+      vim.schedule(function()
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(key, true, false, true), "m", false)
+      end)
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd("BufWritePost", {
+  pattern = { "*.c", "*.cpp", "*.h", "*.hpp" },
+  callback = auto_build("<F8>")
+})
+
+vim.api.nvim_create_autocmd("BufWritePost", {
+  pattern = { "*.vert", "*.frag", "*.glsl" },
+  callback = auto_build("<F9>")
+})
