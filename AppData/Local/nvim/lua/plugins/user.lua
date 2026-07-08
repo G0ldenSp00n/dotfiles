@@ -7,6 +7,9 @@ local function async_build(cmd, path_pattern, desc)
     function()
       if not vim.fn.getcwd():match("project%-wormwood%-engine") then return end
       
+      local is_auto = vim.g.auto_build_triggered
+      vim.g.auto_build_triggered = false
+      
       -- Automatically save all unsaved buffers before building
       vim.g.is_building = true
       vim.cmd("silent! wa")
@@ -20,7 +23,9 @@ local function async_build(cmd, path_pattern, desc)
         
         -- Open quickfix immediately
         vim.fn.setqflist({}, "r", { lines = {}, efm = efm, title = desc .. " Output" })
-        vim.cmd("copen")
+        if not is_auto then
+          vim.cmd("copen")
+        end
         
         local buffer = ""
         local on_data = function(err, data)

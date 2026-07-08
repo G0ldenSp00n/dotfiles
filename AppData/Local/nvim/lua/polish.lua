@@ -95,6 +95,7 @@ local function auto_build(key)
     
     if qf_open then
       vim.schedule(function()
+        vim.g.auto_build_triggered = true
         vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(key, true, false, true), "m", false)
       end)
     end
