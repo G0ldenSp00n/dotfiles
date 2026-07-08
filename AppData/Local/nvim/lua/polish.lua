@@ -93,7 +93,17 @@ local function auto_build(key)
       end
     end
     
+    local has_errors = false
     if qf_open then
+      for _, item in ipairs(vim.fn.getqflist()) do
+        if item.valid == 1 then
+          has_errors = true
+          break
+        end
+      end
+    end
+    
+    if qf_open and has_errors then
       vim.schedule(function()
         vim.g.auto_build_triggered = true
         vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(key, true, false, true), "m", false)
