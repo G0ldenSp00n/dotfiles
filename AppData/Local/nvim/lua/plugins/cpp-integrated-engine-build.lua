@@ -49,6 +49,8 @@ local function async_build(cmd, path_pattern, desc)
         local buffer = ""
         local all_lines = {}
         local path_pattern_unanchored = path_pattern:gsub("^%^", "")
+        local cwd = vim.fn.getcwd():gsub("\\", "/")
+        local src_abs = (cwd .. "/src/"):gsub("%%", "%%%%")
         
         local on_data = function(err, data)
           if not data then return end
@@ -62,9 +64,9 @@ local function async_build(cmd, path_pattern, desc)
               buffer = buffer:sub(nl + 1)
               
               local fixed = line:gsub("\\", "/")
-              fixed = fixed:gsub(path_pattern, "src/")
-              fixed = fixed:gsub("ERROR: " .. path_pattern_unanchored, "ERROR: src/")
-              fixed = fixed:gsub("WARNING: " .. path_pattern_unanchored, "WARNING: src/")
+              fixed = fixed:gsub(path_pattern, src_abs)
+              fixed = fixed:gsub("ERROR: " .. path_pattern_unanchored, "ERROR: " .. src_abs)
+              fixed = fixed:gsub("WARNING: " .. path_pattern_unanchored, "WARNING: " .. src_abs)
               table.insert(new_lines, fixed)
               table.insert(all_lines, fixed)
             end
@@ -88,9 +90,9 @@ local function async_build(cmd, path_pattern, desc)
           vim.schedule(function()
             if buffer ~= "" then
               local fixed = buffer:gsub("\r$", ""):gsub("\\", "/")
-              fixed = fixed:gsub(path_pattern, "src/")
-              fixed = fixed:gsub("ERROR: " .. path_pattern_unanchored, "ERROR: src/")
-              fixed = fixed:gsub("WARNING: " .. path_pattern_unanchored, "WARNING: src/")
+              fixed = fixed:gsub(path_pattern, src_abs)
+              fixed = fixed:gsub("ERROR: " .. path_pattern_unanchored, "ERROR: " .. src_abs)
+              fixed = fixed:gsub("WARNING: " .. path_pattern_unanchored, "WARNING: " .. src_abs)
               table.insert(all_lines, fixed)
             end
             
