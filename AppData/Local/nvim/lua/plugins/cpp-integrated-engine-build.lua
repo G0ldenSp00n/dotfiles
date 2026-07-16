@@ -29,10 +29,12 @@ local function async_build(cmd, path_pattern, desc)
       local is_auto = vim.g.auto_build_triggered
       vim.g.auto_build_triggered = false
       
-      -- Automatically save all unsaved buffers before building
-      vim.g.is_building = true
-      vim.cmd("silent! wa")
-      vim.g.is_building = false
+      if not is_auto then
+        -- Automatically save all unsaved buffers before building
+        vim.g.is_building = true
+        vim.cmd("silent! wa")
+        vim.g.is_building = false
+      end
       
       vim.notify("Building " .. desc .. "...", vim.log.levels.INFO)
       
@@ -45,11 +47,12 @@ local function async_build(cmd, path_pattern, desc)
         end
         
         local buffer = ""
+        local all_lines = {}
         local on_data = function(err, data)
           if not data then return end
           vim.schedule(function()
             buffer = buffer .. data
-            local lines = {}
+            local new_lines = {}
             while true do
               local nl = buffer:find("\n")
               if not nl then break end
@@ -59,11 +62,13 @@ local function async_build(cmd, path_pattern, desc)
               local fixed = line:gsub(path_pattern, "src\\")
               fixed = fixed:gsub("ERROR: " .. path_pattern, "ERROR: src\\")
               fixed = fixed:gsub("WARNING: " .. path_pattern, "WARNING: src\\")
-              table.insert(lines, fixed)
+              table.insert(new_lines, fixed)
+              table.insert(all_lines, fixed)
             end
             
-            if #lines > 0 then
-              vim.fn.setqflist({}, "a", { lines = lines, efm = efm })
+            if #new_lines > 0 then
+              -- Use 'r' (replace) instead of 'a' (append) so diagnostic plugins can hook the update
+              vim.fn.setqflist({}, "r", { lines = all_lines, efm = efm, title = desc .. " Output" })
               local qf_win = vim.fn.getqflist({ winid = 0 }).winid
               if qf_win ~= 0 then
                 local buf = vim.api.nvim_win_get_buf(qf_win)
@@ -82,7 +87,8 @@ local function async_build(cmd, path_pattern, desc)
               local fixed = buffer:gsub("\r$", ""):gsub(path_pattern, "src\\")
               fixed = fixed:gsub("ERROR: " .. path_pattern, "ERROR: src\\")
               fixed = fixed:gsub("WARNING: " .. path_pattern, "WARNING: src\\")
-              vim.fn.setqflist({}, "a", { lines = { fixed }, efm = efm })
+              table.insert(all_lines, fixed)
+              vim.fn.setqflist({}, "r", { lines = all_lines, efm = efm, title = desc .. " Output" })
               local qf_win = vim.fn.getqflist({ winid = 0 }).winid
               if qf_win ~= 0 then
                 local buf = vim.api.nvim_win_get_buf(qf_win)
