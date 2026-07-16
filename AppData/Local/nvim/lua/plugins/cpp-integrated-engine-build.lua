@@ -48,6 +48,8 @@ local function async_build(cmd, path_pattern, desc)
         
         local buffer = ""
         local all_lines = {}
+        local path_pattern_unanchored = path_pattern:gsub("^%^", "")
+        
         local on_data = function(err, data)
           if not data then return end
           vim.schedule(function()
@@ -59,16 +61,17 @@ local function async_build(cmd, path_pattern, desc)
               local line = buffer:sub(1, nl - 1):gsub("\r$", "")
               buffer = buffer:sub(nl + 1)
               
-              local fixed = line:gsub(path_pattern, "src\\")
-              fixed = fixed:gsub("ERROR: " .. path_pattern, "ERROR: src\\")
-              fixed = fixed:gsub("WARNING: " .. path_pattern, "WARNING: src\\")
+              local fixed = line:gsub("\\", "/")
+              fixed = fixed:gsub(path_pattern, "src/")
+              fixed = fixed:gsub("ERROR: " .. path_pattern_unanchored, "ERROR: src/")
+              fixed = fixed:gsub("WARNING: " .. path_pattern_unanchored, "WARNING: src/")
               table.insert(new_lines, fixed)
               table.insert(all_lines, fixed)
             end
             
             if #new_lines > 0 then
-              -- Use 'r' (replace) instead of 'a' (append) so diagnostic plugins can hook the update
-              vim.fn.setqflist({}, "r", { lines = all_lines, efm = efm, title = desc .. " Output" })
+              -- Use 'a' during stream for performance and smooth scrolling
+              vim.fn.setqflist({}, "a", { lines = new_lines, efm = efm })
               local qf_win = vim.fn.getqflist({ winid = 0 }).winid
               if qf_win ~= 0 then
                 local buf = vim.api.nvim_win_get_buf(qf_win)
@@ -84,17 +87,21 @@ local function async_build(cmd, path_pattern, desc)
         }, function(obj)
           vim.schedule(function()
             if buffer ~= "" then
-              local fixed = buffer:gsub("\r$", ""):gsub(path_pattern, "src\\")
-              fixed = fixed:gsub("ERROR: " .. path_pattern, "ERROR: src\\")
-              fixed = fixed:gsub("WARNING: " .. path_pattern, "WARNING: src\\")
+              local fixed = buffer:gsub("\r$", ""):gsub("\\", "/")
+              fixed = fixed:gsub(path_pattern, "src/")
+              fixed = fixed:gsub("ERROR: " .. path_pattern_unanchored, "ERROR: src/")
+              fixed = fixed:gsub("WARNING: " .. path_pattern_unanchored, "WARNING: src/")
               table.insert(all_lines, fixed)
-              vim.fn.setqflist({}, "r", { lines = all_lines, efm = efm, title = desc .. " Output" })
-              local qf_win = vim.fn.getqflist({ winid = 0 }).winid
-              if qf_win ~= 0 then
-                local buf = vim.api.nvim_win_get_buf(qf_win)
-                vim.api.nvim_win_set_cursor(qf_win, { vim.api.nvim_buf_line_count(buf), 0 })
-              end
             end
+            
+            -- Final full replace to trigger quickfix-to-diagnostic plugins properly
+            vim.fn.setqflist({}, "r", { lines = all_lines, efm = efm, title = desc .. " Output" })
+            local qf_win = vim.fn.getqflist({ winid = 0 }).winid
+            if qf_win ~= 0 then
+              local buf = vim.api.nvim_win_get_buf(qf_win)
+              vim.api.nvim_win_set_cursor(qf_win, { vim.api.nvim_buf_line_count(buf), 0 })
+            end
+            
             if obj.code == 0 then
               vim.notify(desc .. " successful!", vim.log.levels.INFO)
             else
@@ -208,8 +215,8 @@ return {
             end,
             desc = "Restart Debugging in RemedyBG"
           },
-          ["<F8>"] = async_build(".\\build.bat", "^%.%.[/\\]src[/\\]", "Engine Code"),
-          ["<F9>"] = async_build(".\\build_shaders.bat", "^%.%.[/\\]%.%.[/\\]src[/\\]", "Shaders"),
+          ["<F8>"] = async_build(".\\build.bat", "^%.%./src/", "Engine Code"),
+          ["<F9>"] = async_build(".\\build_shaders.bat", "^%.%./%.%./src/", "Shaders"),
           ["]q"] = { "<cmd>cnext<CR>", desc = "Next build issue" },
           ["[q"] = { "<cmd>cprev<CR>", desc = "Previous build issue" },
         }
