@@ -17,9 +17,6 @@ return {
       },
     },
   },
-      },
-    },
-  },
 
  {
     "folke/snacks.nvim",
